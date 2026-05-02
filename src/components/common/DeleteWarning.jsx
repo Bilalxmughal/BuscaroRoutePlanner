@@ -48,7 +48,7 @@ export default function DeleteWarning({ routeName, onConfirm, onCancel, loading 
             className={`${styles.captchaInput} ${shaking ? styles.shake : ''}`}
             value={input}
             onChange={e => setInput(e.target.value.toUpperCase())}
-            placeholder="Yahan code type karein"
+            placeholder="Please type the code here"
             maxLength={6}
             autoFocus
             onKeyDown={e => e.key === 'Enter' && handleConfirm()}
@@ -65,7 +65,7 @@ export default function DeleteWarning({ routeName, onConfirm, onCancel, loading 
             onClick={handleConfirm}
             disabled={loading || input.length < 6}
           >
-            {loading ? 'Deleting...' : '🗑 Haan, Delete Karein'}
+            {loading ? 'Deleting...' : '🗑 Yes, Delete'}
           </button>
         </div>
       </div>
