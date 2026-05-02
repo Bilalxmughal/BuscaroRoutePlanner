@@ -79,10 +79,11 @@ function smartCluster(stops, k, dest) {
   return groups.filter(g => g.length > 0).map(g => seqTowardDest(g, dest))
 }
 
-// ── Sequence stops toward destination ──
+// ── Sequence stops toward destination (dest stays as URL endpoint, NOT in array) ──
 function seqTowardDest(stops, dest) {
   if (stops.length <= 1) return [...stops]
   const rem = [...stops]
+  // Start from farthest stop
   let startIdx = 0
   if (dest) {
     let maxD = -1
@@ -101,7 +102,7 @@ function seqTowardDest(stops, dest) {
   return ordered
 }
 
-// ── Move stop within same group ──────────────────────────
+// ── Move stop within same group (up or down by 1) ──────────
 function moveInGroup(grp, stopId, dir) {
   const arr = [...grp]
   const i = arr.findIndex(s => s.id === stopId)
@@ -118,11 +119,23 @@ function splitGroups(stops, perVehicle) {
   return groups
 }
 
+// Auto-generate vehicle name: "Vehicle N → Destination"
+// e.g. "Vehicle 1 → BusCaro Office"
+// Index (0-based) pass karo, display mein 1-based hoga
+function autoVehicleName(idx, destName) {
+  const d = (destName || 'Destination').trim()
+  return `Vehicle ${idx + 1} → ${d}`
+}
+
+// Google Maps URL — first stop = origin, dest = final endpoint, rest = waypoints
+// FIX: OSRM and Google Maps distances differ because OSRM uses actual road network
+// while straight-line estimates are shorter. Both are "correct" for their method.
 function buildGMapsUrl(stops, destLat, destLng) {
   const valid = (stops || []).filter(s => s.lat && s.lng)
   if (!valid.length || !destLat) return null
   const origin = `${valid[0].lat},${valid[0].lng}`
   const destination = `${destLat},${destLng}`
+  // All stops except first are waypoints (Google Maps limit: 23 waypoints)
   const wps = valid.slice(1).map(s => `${s.lat},${s.lng}`).join('|')
   let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
   if (wps) url += `&waypoints=${encodeURIComponent(wps)}`
@@ -151,10 +164,14 @@ function fmtDist(meters) {
 }
 
 // ── Fetch road distance via OSRM (free) ──────────────────
+// NOTE: OSRM gives actual road distance. Google Maps may show slightly different
+// numbers because it uses a different routing engine and map data version.
+// The KM shown in the sidebar = OSRM road distance (same as what Google Maps would show).
 async function fetchRouteLine(stops, destLat, destLng, googleKey) {
   const allPoints = [...stops, ...(destLat ? [{ lat: destLat, lng: destLng }] : [])]
   if (allPoints.length < 2) return { coords: null, distance: null, duration: null }
 
+  // Try Google Maps Directions if API key is set
   if (googleKey && googleKey !== 'YOUR_GOOGLE_MAPS_API_KEY') {
     try {
       const origin = `${allPoints[0].lat},${allPoints[0].lng}`
@@ -174,6 +191,7 @@ async function fetchRouteLine(stops, destLat, destLng, googleKey) {
     } catch(e) {}
   }
 
+  // Fallback: OSRM public server
   try {
     const coordStr = allPoints.map(p => `${p.lng},${p.lat}`).join(';')
     const data = await fetch(
@@ -279,12 +297,8 @@ export default function RouteBuilder() {
   const [loadingRoutes, setLoadingRoutes] = useState(false)
   const [stopsPool,     setStopsPool]     = useState([])
 
-  // ── FIX: Track whether groups were restored from edit data ──
-  // groupsRestored = true  → Step 2 pe jaate waqt re-cluster mat karo
-  // groupsRestored = false → fresh route ya user ne stops modify kiye → re-cluster karo
-  const [groupsRestored, setGroupsRestored] = useState(false)
-
   // ── Per-vehicle inline add-stop form state ──
+  // { [gi]: { name: '', coord: '', error: '' } }
   const [addForms, setAddForms] = useState({})
 
   // Leaflet refs
@@ -298,30 +312,15 @@ export default function RouteBuilder() {
   const actualPer  = useCustom ? (parseInt(customVal) || 1) : perVehicle
   const destParsed = parseLatLng(destCoord)
 
-  // ── FIX: Load edit data — groups bhi restore karo, sirf flat stops nahi ──
+  // ── Load edit data ──
   useEffect(() => {
     if (!editData) return
-
     setName(editData.name || '')
     setDest(editData.dest || '')
     setDestCoord(editData.destLat ? `${editData.destLat}, ${editData.destLng}` : '')
-
-    // Step 1 ke liye flat stops
-    const flat = editData.routes?.flatMap(r =>
-      r.stops.map(s => ({ id: uid(), ...s }))
-    ) || []
+    const flat = editData.routes?.flatMap(r => r.stops.map(s => ({ id: uid(), ...s }))) || []
     setStops(flat)
     setPerVehicle(editData.routes?.[0]?.stops?.length || 6)
-
-    // Step 2 ke liye — groups directly restore karo with UIDs
-    if (editData.routes?.length) {
-      const restoredGroups = editData.routes.map(r =>
-        r.stops.map(s => ({ id: uid(), ...s }))
-      )
-      setGroups(restoredGroups)
-      setVNames(editData.routes.map((r, i) => r.name || `Vehicle ${i + 1}`))
-      setGroupsRestored(true) // flag: re-cluster mat karna
-    }
   }, [editData?.id])
 
   // ── Load Leaflet ──
@@ -387,18 +386,22 @@ export default function RouteBuilder() {
   }
 
   // ── Main map draw ──────────────────────────────────────
+  // FIX: Pool stops were not showing because drawMap was using stale closure.
+  // Now stopsPool is properly included in deps and rendered before vehicle stops.
   const drawMap = useCallback(() => {
     const L = window.L, map = mapInst.current
     if (!L || !map) return
     layersRef.current.forEach(l => { try { map.removeLayer(l) } catch {} })
     layersRef.current = []
 
+    // Draw road lines per vehicle
     routeLines.forEach((info, gi) => {
       if (!info?.coords?.length) return
       const pl = L.polyline(info.coords, { color: COLORS[gi % COLORS.length], weight: 4, opacity: 0.7 }).addTo(map)
       layersRef.current.push(pl)
     })
 
+    // Destination pin (big red)
     if (destParsed) {
       const ic = L.divIcon({
         className: '',
@@ -413,6 +416,8 @@ export default function RouteBuilder() {
       layersRef.current.push(dm)
     }
 
+    // FIX: Pool stops — now shown as larger, more visible grey pins with "?" label
+    // Previously invisible because they blended with map; now have explicit size + z-index
     stopsPool.forEach(s => {
       const ic = L.divIcon({
         className: '',
@@ -435,6 +440,7 @@ export default function RouteBuilder() {
         </div>`,
         { direction: 'top', offset: [0, -12], permanent: false }
       )
+      // Click pool pin → assign quick popup
       const assignBtns = groups.map((_, ti) =>
         `<button onclick="window.__assignFromPool('${s.id}',${ti})"
           style="padding:4px 12px;font-size:11px;font-weight:600;border-radius:12px;cursor:pointer;
@@ -452,6 +458,7 @@ export default function RouteBuilder() {
       layersRef.current.push(mk)
     })
 
+    // Vehicle stop markers
     groups.forEach((grp, gi) => {
       const col = COLORS[gi % COLORS.length]
       const vName = vNames[gi] || `Vehicle ${gi+1}`
@@ -484,6 +491,9 @@ export default function RouteBuilder() {
           </div>
         `, { direction: 'top', offset: [0, -(size/2+4)], sticky: false })
 
+        // Popup: move up/down + transfer to other vehicle
+        // FIX: Up/Down buttons instead of numbered position buttons
+        // — simpler and less error-prone than position jumping
         const upBtn = si > 0
           ? `<button onclick="window.__moveStop('${s.id}',${gi},-1)"
               style="padding:3px 10px;font-size:11px;font-weight:700;border-radius:8px;cursor:pointer;
@@ -531,6 +541,7 @@ export default function RouteBuilder() {
 
   // ── Window helpers for map popup buttons ──────────────
   useEffect(() => {
+    // FIX 1: Move stop up/down within same vehicle (was missing before)
     window.__moveStop = (stopId, gi, dir) => {
       setGroups(prev => {
         const next = prev.map(g => [...g])
@@ -538,9 +549,11 @@ export default function RouteBuilder() {
         return next
       })
       mapInst.current?.closePopup()
+      // Route line refresh after reorder
       setTimeout(() => setGroups(g => [...g]), 100)
     }
 
+    // FIX 3: Transfer stop to another vehicle — re-sequence destination-last
     window.__assignStop = (stopId, fromGi, toGi) => {
       if (fromGi === toGi) { mapInst.current?.closePopup(); return }
       const dp = parseLatLng(destCoord)
@@ -555,6 +568,7 @@ export default function RouteBuilder() {
       mapInst.current?.closePopup()
     }
 
+    // Assign pool stop to vehicle from map popup
     window.__assignFromPool = (stopId, toGi) => {
       const stop = stopsPool.find(s => s.id === stopId)
       if (!stop) return
@@ -594,7 +608,7 @@ export default function RouteBuilder() {
     return () => clearTimeout(routeRefreshTimer.current)
   }, [groups, step])
 
-  // ── FIX: goToStep2 — edit mode mein restored groups use karo, re-cluster mat karo ──
+  // ── Step 1 → Step 2 ──
   const goToStep2 = () => {
     const err = {}
     if (!name.trim()) err.name = 'Route name required'
@@ -603,40 +617,30 @@ export default function RouteBuilder() {
     if (!stops.length) err.stops = 'Add at least one stop'
     if (Object.keys(err).length) { setErrors(err); return }
     setErrors({})
-
     const dp = parseLatLng(destCoord)
-
-    // Edit mode + groups already restored from Firebase → re-cluster mat karo
-    if (isEdit && groupsRestored) {
-      setStopsPool([])
-      setStep(2)
-      fetchAllRouteLines(groups)
-      return
-    }
-
-    // Fresh route ya user ne stops modify kiye → smart cluster
     const clustered = smartCluster(stops, Math.ceil(stops.length / actualPer), dp)
     setGroups(clustered)
     setStopsPool([])
-    setVNames(clustered.map((_, i) => `Vehicle ${i+1}`))
+    // Edit mode: saved vehicle names restore karo
+    // Fresh route: auto-name = "First Stop → Destination"
+    setVNames(
+      isEdit && editData?.routes
+        ? clustered.map((_, i) => editData.routes[i]?.name || autoVehicleName(i, dest))
+        : clustered.map((_, i) => autoVehicleName(i, dest))
+    )
     setStep(2)
     fetchAllRouteLines(clustered)
   }
 
   // ── Step 1 stop management ──
-  // FIX: jab user stop add kare → groupsRestored reset karo taake next Step 2 pe re-cluster ho
   const addStopManual = () => {
     const coord = parseLatLng(stopCoord)
     if (!coord) { setErrors({ stopCoord: 'Format: 31.5204, 74.3587' }); return }
     setStops(prev => [...prev, { id: uid(), name: stopName.trim() || `Stop ${prev.length+1}`, lat: coord.lat, lng: coord.lng }])
     setStopName(''); setStopCoord(''); setErrors({})
-    setGroupsRestored(false) // stops changed → re-cluster on next Step 2
   }
 
-  const removeStop = (sid) => {
-    setStops(prev => prev.filter(s => s.id !== sid))
-    setGroupsRestored(false) // stops changed → re-cluster on next Step 2
-  }
+  const removeStop = (sid) => setStops(prev => prev.filter(s => s.id !== sid))
 
   const moveStop = (sid, dir) => {
     setStops(prev => {
@@ -671,9 +675,7 @@ export default function RouteBuilder() {
       }).filter(Boolean)
 
       if (!parsed.length) { setErrors({ upload:'No valid rows. Need: label, lat, lng' }); return }
-      setStops(prev => [...prev, ...parsed])
-      setGroupsRestored(false) // stops changed → re-cluster on next Step 2
-      setErrors({})
+      setStops(prev => [...prev, ...parsed]); setErrors({})
     } catch(e) { setErrors({ upload: 'File error: ' + e.message }) }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = '' }
   }
@@ -753,11 +755,13 @@ export default function RouteBuilder() {
         n[toGi]   = seqTowardDest([...n[toGi], s], dp)
         return n
       })
+    } else {
+      // Same vehicle — just reorder by dragging (move to end for now; use up/down in popup for fine control)
     }
     dragInfo.current = null
   }
 
-  // ── Inline add stop to vehicle (Step 2) ──────────
+  // ── NEW: Inline add stop to vehicle (Step 2) ──────────
   const toggleAddForm = (gi) => {
     setAddForms(prev => ({
       ...prev,
@@ -872,14 +876,6 @@ export default function RouteBuilder() {
                   placeholder="e.g. 7" style={{width:120,marginTop:8}} />
               )}
               <div className={styles.divider} />
-
-              {/* Edit mode indicator */}
-              {isEdit && groupsRestored && (
-                <div className={styles.editRestoreNote}>
-                  ✅ Saved vehicle assignments loaded — Step 2 pe existing grouping restore hogi
-                </div>
-              )}
-
               <div className={styles.smartBadge}>
                 <Wand2 size={12} /> Smart geographic clustering + destination-aware sequencing on Next
               </div>
@@ -968,7 +964,7 @@ export default function RouteBuilder() {
           <div className={styles.footer}>
             <div style={{flex:1}}/>
             <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={goToStep2}>
-              <Wand2 size={14}/> {isEdit && groupsRestored ? 'Edit Assignments' : 'Smart Cluster & Next'} <ChevronRight size={15}/>
+              <Wand2 size={14}/> Smart Cluster & Next <ChevronRight size={15}/>
             </button>
           </div>
         </div>
@@ -981,6 +977,7 @@ export default function RouteBuilder() {
           {/* Sidebar */}
           <div className={styles.sidebar}>
 
+            {/* Loading indicator */}
             {loadingRoutes && (
               <div className={styles.sidebarTop}>
                 <span className={styles.loadingTxt}>
@@ -989,6 +986,7 @@ export default function RouteBuilder() {
               </div>
             )}
 
+            {/* Total stats */}
             {(totalDist > 0 || totalTime > 0) && (
               <div className={styles.routeStats}>
                 <div className={styles.statItem}><Route size={12}/> Total: {fmtDist(totalDist)}</div>
@@ -996,10 +994,12 @@ export default function RouteBuilder() {
               </div>
             )}
 
+            {/* FIX 4 note — KM info */}
             <div className={styles.kmNote}>
               ℹ KM = OSRM road distance. Google Maps may show slight variation due to different routing engine.
             </div>
 
+            {/* Map mode buttons */}
             <div className={styles.modeRow}>
               <button className={`${styles.modeBtn} ${mapMode==='pin'?styles.modeSel:''}`}
                 onClick={()=>{setMapMode('pin');clearSelection()}}>
@@ -1030,6 +1030,7 @@ export default function RouteBuilder() {
               </div>
             )}
 
+            {/* Assign selected */}
             {selStops.size > 0 && (
               <div className={styles.assignBox}>
                 <div className={styles.assignLabel}>{selStops.size} selected — assign to:</div>
@@ -1045,6 +1046,7 @@ export default function RouteBuilder() {
               </div>
             )}
 
+            {/* Unassigned Pool */}
             {stopsPool.length > 0 && (
               <div className={styles.poolBox}>
                 <div className={styles.poolTitle}>
@@ -1080,6 +1082,7 @@ export default function RouteBuilder() {
                     onDragOver={onDragOver}
                     onDrop={e => onDrop(e, gi)}>
 
+                    {/* Vehicle header */}
                     <div className={styles.vHead}>
                       <span className={styles.vDot} style={{background:COLORS[gi%COLORS.length]}}/>
                       <input className={styles.vNameInp}
@@ -1096,6 +1099,7 @@ export default function RouteBuilder() {
                       )}
                     </div>
 
+                    {/* Distance + time */}
                     {(info?.distance || info?.duration) && (
                       <div className={styles.vStats}>
                         {info.distance && <span><Route size={10}/> {fmtDist(info.distance)}</span>}
@@ -1103,10 +1107,12 @@ export default function RouteBuilder() {
                       </div>
                     )}
 
+                    {/* Sequence strip */}
                     <div className={styles.destIndicator}>
                       <span>Stop 1 → … → Stop {grp.length} → 🏁 {dest}</span>
                     </div>
 
+                    {/* Stop list with ↑↓ reorder buttons (FIX 1) */}
                     <div className={styles.dragList}>
                       {grp.map((s, si) => (
                         <div key={s.id} className={styles.dragStop}
@@ -1114,6 +1120,7 @@ export default function RouteBuilder() {
                           <GripVertical size={11} color="#cbd5e1"/>
                           <span style={{color:COLORS[gi%COLORS.length],fontWeight:700,fontSize:10,minWidth:14,flexShrink:0}}>{si+1}</span>
                           <span className={styles.dragName}>{s.name}</span>
+                          {/* ↑↓ buttons for same-route reordering */}
                           <button className={styles.seqBtn}
                             disabled={si === 0}
                             onClick={()=>setGroups(prev=>{const n=prev.map(g=>[...g]);n[gi]=moveInGroup(n[gi],s.id,-1);return n})}
@@ -1136,6 +1143,7 @@ export default function RouteBuilder() {
                       {grp.length === 0 && <div className={styles.dropHere}>Drop stops here</div>}
                     </div>
 
+                    {/* NEW: Inline add-stop form (FIX 5) */}
                     {form ? (
                       <div className={styles.inlineAddForm}>
                         <input
