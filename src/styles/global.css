@@ -1,0 +1,29 @@
+/* src/styles/global.css */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f5f6fa;
+  color: #334155;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --orange: #f97316;
+  --orange-light: #fff4ed;
+  --orange-border: #fed7aa;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+  --bg: #fff;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+/* Leaflet map fix */
+.leaflet-container { height: 100%; width: 100%; border-radius: var(--radius); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }

@@ -1,0 +1,53 @@
+/* src/components/common/ui.module.css */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 9px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid transparent; transition: all 0.2s;
+  white-space: nowrap; text-decoration: none;
+}
+.btnPrimary { background: var(--orange); color: #fff; border-color: var(--orange); }
+.btnPrimary:hover { background: #ea6c0a; }
+.btnPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btnOutline { background: #fff; color: #475569; border-color: var(--border); }
+.btnOutline:hover { border-color: var(--orange-border); color: var(--orange); background: var(--orange-light); }
+.btnDanger { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.btnDanger:hover { background: #fee2e2; border-color: #fca5a5; }
+.btnSm { padding: 6px 11px; font-size: 12px; }
+
+.card {
+  background: #fff; border-radius: var(--radius-lg);
+  border: 1px solid var(--border); padding: 20px;
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+}
+.badgeOrange { background: var(--orange-light); color: #c2410c; }
+.badgeGreen { background: #f0fdf4; color: #16a34a; }
+.badgeBlue { background: #eff6ff; color: #1d4ed8; }
+
+.spinner {
+  width: 28px; height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.emptyState {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px; padding: 60px 20px;
+  color: #94a3b8; text-align: center;
+}
+.emptyIcon { font-size: 42px; opacity: 0.4; }
+
+.pageHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; gap: 12px; flex-wrap: wrap;
+}
+.pageTitle { font-size: 20px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+.pageSubtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }

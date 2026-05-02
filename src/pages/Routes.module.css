@@ -1,0 +1,68 @@
+/* src/pages/Routes.module.css */
+.center {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; min-height: 300px; gap: 14px;
+}
+.errorBox {
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px;
+  padding: 20px 28px; text-align: center; display: flex; flex-direction: column; gap: 10px;
+  color: #dc2626; font-weight: 600; font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  transition: all 0.2s; display: flex; flex-direction: column;
+}
+.card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.08); }
+
+.cardTop { padding: 16px 18px; }
+.cardName { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+.cardDest { font-size: 12px; color: #64748b; margin-bottom: 10px; }
+.cardBadges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.subRoutes {
+  border-top: 1px solid #f1f5f9;
+  padding: 10px 18px; display: flex; flex-direction: column; gap: 6px;
+  flex: 1;
+}
+
+.subRouteRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subDot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.subName { font-size: 12px; font-weight: 500; color: #334155; flex: 1; }
+.subCount { font-size: 11px; color: #94a3b8; }
+
+/* Google Maps link per vehicle */
+.gmapsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #16a34a;
+  border-radius: 20px;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.gmapsBtn:hover { background: #dcfce7; }
+
+.cardActions {
+  border-top: 1px solid #f1f5f9;
+  padding: 10px 14px; display: flex; gap: 6px; align-items: center;
+}
