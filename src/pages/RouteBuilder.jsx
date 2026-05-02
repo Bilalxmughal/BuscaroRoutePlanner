@@ -119,12 +119,23 @@ function splitGroups(stops, perVehicle) {
   return groups
 }
 
-// Auto-generate vehicle name: "Vehicle N → Destination"
-// e.g. "Vehicle 1 → BusCaro Office"
-// Index (0-based) pass karo, display mein 1-based hoga
-function autoVehicleName(idx, destName) {
-  const d = (destName || 'Destination').trim()
-  return `Vehicle ${idx + 1} → ${d}`
+// Reverse-geocode first stop lat/lng → short area name via Nominatim (free, no key)
+// Returns e.g. "Gulberg III", "DHA Phase 5"
+async function geocodeAreaName(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14&addressdetails=1`,
+      { headers: { 'Accept-Language': 'en' } }
+    )
+    const data = await res.json()
+    const a = data.address || {}
+    return (
+      a.neighbourhood || a.suburb || a.quarter ||
+      a.city_district  || a.town  || a.village ||
+      a.county         || data.display_name?.split(',')[0] ||
+      'Area'
+    )
+  } catch { return null }
 }
 
 // Google Maps URL — first stop = origin, dest = final endpoint, rest = waypoints
@@ -289,6 +300,8 @@ export default function RouteBuilder() {
   // ── Step 2 ──
   const [groups,        setGroups]        = useState([])
   const [vNames,        setVNames]        = useState([])
+  const [routeLabels,   setRouteLabels]   = useState([])  // geocoded "Area → Dest" labels
+  const [geocodingIdx,  setGeocodingIdx]  = useState(new Set()) // which indices are loading
   const [mapMode,       setMapMode]       = useState('pin')
   const [selStops,      setSelStops]      = useState(new Set())
   const [polyPts,       setPolyPts]       = useState([])
@@ -621,13 +634,27 @@ export default function RouteBuilder() {
     const clustered = smartCluster(stops, Math.ceil(stops.length / actualPer), dp)
     setGroups(clustered)
     setStopsPool([])
-    // Edit mode: saved vehicle names restore karo
-    // Fresh route: auto-name = "First Stop → Destination"
-    setVNames(
-      isEdit && editData?.routes
-        ? clustered.map((_, i) => editData.routes[i]?.name || autoVehicleName(i, dest))
-        : clustered.map((_, i) => autoVehicleName(i, dest))
-    )
+    // Vehicle numbers fixed: Vehicle 1, Vehicle 2...
+    setVNames(clustered.map((_, i) => `Vehicle ${i + 1}`))
+    // Route labels: restore from edit OR geocode first stop of each cluster
+    if (isEdit && editData?.routes) {
+      setRouteLabels(clustered.map((_, i) => editData.routes[i]?.routeLabel || ''))
+    } else {
+      setRouteLabels(clustered.map(() => '')) // blank until geocoded
+      // Geocode first stop of each group async
+      clustered.forEach((grp, i) => {
+        if (!grp[0]) return
+        setGeocodingIdx(prev => new Set([...prev, i]))
+        geocodeAreaName(grp[0].lat, grp[0].lng).then(area => {
+          setRouteLabels(prev => {
+            const n = [...prev]
+            n[i] = area ? (area + ' → ' + dest) : ('Vehicle ' + (i + 1) + ' → ' + dest)
+            return n
+          })
+          setGeocodingIdx(prev => { const s = new Set(prev); s.delete(i); return s })
+        })
+      })
+    }
     setStep(2)
     fetchAllRouteLines(clustered)
   }
@@ -797,6 +824,7 @@ export default function RouteBuilder() {
         destLat: dp?.lat || null, destLng: dp?.lng || null,
         routes: groups.map((g, i) => ({
           name: vNames[i] || `Vehicle ${i+1}`,
+          routeLabel: routeLabels[i] || '',
           stops: g.map(({ id, ...rest }) => rest),
           color: COLORS[i % COLORS.length],
           distance: routeLines[i]?.distance || null,
@@ -1082,12 +1110,13 @@ export default function RouteBuilder() {
                     onDragOver={onDragOver}
                     onDrop={e => onDrop(e, gi)}>
 
-                    {/* Vehicle header */}
+                    {/* Vehicle header — fixed number + editable name */}
                     <div className={styles.vHead}>
                       <span className={styles.vDot} style={{background:COLORS[gi%COLORS.length]}}/>
-                      <input className={styles.vNameInp}
-                        value={vNames[gi]||''} placeholder={`Vehicle ${gi+1}`}
-                        onChange={e=>{const u=[...vNames];u[gi]=e.target.value;setVNames(u)}} />
+                      {/* Fixed vehicle number */}
+                      <span className={styles.vNum}>
+                        Vehicle {gi+1}
+                      </span>
                       <span className={`${ui.badge} ${ui.badgeBlue}`} style={{flexShrink:0}}>
                         {grp.length} stops
                       </span>
@@ -1096,6 +1125,19 @@ export default function RouteBuilder() {
                           className={styles.gmBtn} title="Open in Google Maps">
                           <Navigation size={11}/>
                         </a>
+                      )}
+                    </div>
+                    {/* Route label row — geocoded + editable */}
+                    <div className={styles.routeLabelRow}>
+                      <MapPin size={10} color="#f97316" style={{flexShrink:0}}/>
+                      <input
+                        className={styles.routeLabelInp}
+                        value={routeLabels[gi] || ''}
+                        placeholder={geocodingIdx.has(gi) ? 'Fetching area name...' : 'Route name (e.g. Gulberg → Office)'}
+                        onChange={e=>{const u=[...routeLabels];u[gi]=e.target.value;setRouteLabels(u)}}
+                      />
+                      {geocodingIdx.has(gi) && (
+                        <RefreshCw size={10} color="#94a3b8" style={{flexShrink:0,animation:'spin .7s linear infinite'}}/>
                       )}
                     </div>
 

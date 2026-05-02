@@ -1082,3 +1082,183 @@
   margin-bottom: 4px;
 }
 
+/* ─────────────────────────────────────────────────────────
+   ADDITIONS — append these to RouteBuilder.module.css
+   Missing classes referenced in RouteBuilder.jsx (doc6)
+───────────────────────────────────────────────────────── */
+
+/* ── Fixed vehicle number label (Step 2 vCard header) ── */
+.vNum {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Route label row (geocoded area name — editable) ── */
+.routeLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  background: #fff4ed;
+  border-bottom: 1px solid #fed7aa;
+}
+
+.routeLabelInp {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 500;
+  color: #c2410c;
+  border: none;
+  background: transparent;
+  outline: none;
+  min-width: 0;
+}
+
+.routeLabelInp::placeholder {
+  color: #fdba74;
+  font-style: italic;
+}
+
+/* ── isDirty badge — top bar unsaved indicator ── */
+.dirtyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #d97706;
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  border-radius: 20px;
+  white-space: nowrap;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   UNSAVED CHANGES MODAL
+══════════════════════════════════════════════════════════ */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modalBox {
+  background: #fff;
+  border-radius: 18px;
+  padding: 32px 28px 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.88); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.modalIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fff4ed;
+  border: 2px solid #fed7aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.modalTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  text-align: center;
+}
+
+.modalDesc {
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.modalDesc strong {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.modalActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* Primary action — stay and save */
+.modalStayBtn {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: #f97316;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.1s;
+}
+
+.modalStayBtn:hover  { background: #ea580c; }
+.modalStayBtn:active { transform: scale(0.98); }
+
+/* Secondary action — leave without saving */
+.modalLeaveBtn {
+  width: 100%;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.modalLeaveBtn:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
