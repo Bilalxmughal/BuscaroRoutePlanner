@@ -65,7 +65,7 @@ export default function Routes() {
         <div>
           <div className={ui.pageTitle}>Route List</div>
           <div className={ui.pageSubtitle}>
-            {routes.length} route group{routes.length !== 1 ? 's' : ''} saved in Firebase
+            {routes.length} route group{routes.length !== 1 ? 's' : ''} saved
           </div>
         </div>
         <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/routes/new')}>
@@ -77,7 +77,7 @@ export default function Routes() {
         <div className={ui.emptyState}>
           <div className={ui.emptyIcon}>🗺</div>
           <div style={{ fontWeight: 600, color: '#475569', fontSize: 15 }}>No routes found</div>
-          <p style={{ fontSize: 13 }}>Create your first route and save it to Firebase</p>
+          <p style={{ fontSize: 13 }}>Create your first route</p>
           <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/routes/new')}>
             <Plus size={14} /> Create First Route
           </button>

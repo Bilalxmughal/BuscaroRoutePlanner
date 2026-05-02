@@ -33,13 +33,13 @@ export default function DeleteWarning({ routeName, onConfirm, onCancel, loading 
         <div className={styles.iconWrap}>
           <AlertTriangle size={28} color="#dc2626" />
         </div>
-        <h2 className={styles.title}>Route Delete Karein?</h2>
+        <h2 className={styles.title}>Route Delete?</h2>
         <p className={styles.desc}>
-          <strong>"{routeName}"</strong> aur is ke andar ke tamam routes aur stops permanently delete ho jayenge. Yeh action undo nahi ho sakta.
+          <strong>"{routeName}"</strong> and all the routes and stops inside it will be permanently deleted. This action cannot be undone.
         </p>
 
         <div className={styles.captchaSection}>
-          <p className={styles.captchaLabel}>Delete confirm karne ke liye neeche diya gaya code type karein:</p>
+          <p className={styles.captchaLabel}>To confirm deletion, please type the code given below.:</p>
           <div className={`${styles.captchaBox} ${shaking ? styles.shake : ''}`}>
             <span className={styles.captchaText}>{captcha}</span>
             <button className={styles.refreshBtn} onClick={refresh} title="Naya code">↻</button>
@@ -53,7 +53,7 @@ export default function DeleteWarning({ routeName, onConfirm, onCancel, loading 
             autoFocus
             onKeyDown={e => e.key === 'Enter' && handleConfirm()}
           />
-          {shaking && <p className={styles.errorMsg}>⚠ Code match nahi hua. Dobara try karein.</p>}
+          {shaking && <p className={styles.errorMsg}>⚠ The code did not match. Please try again..</p>}
         </div>
 
         <div className={styles.actions}>

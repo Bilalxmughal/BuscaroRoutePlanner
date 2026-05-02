@@ -24,7 +24,7 @@ export default function Dashboard() {
   if (loading) return (
     <div className={styles.center}>
       <div className={ui.spinner} />
-      <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 12 }}>Firebase se data load ho raha hai...</p>
+      <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 12 }}>Loading...</p>
     </div>
   )
 
@@ -33,7 +33,7 @@ export default function Dashboard() {
       <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '20px 28px', textAlign: 'center' }}>
         <p style={{ color: '#dc2626', fontWeight: 600, marginBottom: 8 }}>⚠ {error}</p>
         <button className={`${ui.btn} ${ui.btnOutline}`} onClick={reload}>
-          <RefreshCw size={14} /> Dobara Try Karein
+          <RefreshCw size={14} /> Try Again
         </button>
       </div>
     </div>
@@ -47,7 +47,7 @@ export default function Dashboard() {
           <div className={ui.pageSubtitle}>BusCaro Route Planner — Overview</div>
         </div>
         <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/routes')}>
-          <Plus size={15} /> Route Banayein
+          <Plus size={15} /> Create Route
         </button>
       </div>
 
@@ -72,10 +72,10 @@ export default function Dashboard() {
       {routes.length === 0 ? (
         <div className={ui.emptyState}>
           <div className={ui.emptyIcon}>🗺</div>
-          <div style={{ fontWeight: 600, color: '#475569' }}>Koi route nahi mila</div>
-          <p style={{ fontSize: 13 }}>Pehla route banayein</p>
+          <div style={{ fontWeight: 600, color: '#475569' }}>Route didn't found</div>
+          <p style={{ fontSize: 13 }}>First, Create Route</p>
           <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/routes')}>
-            <Plus size={14} /> Route Banayein
+            <Plus size={14} /> Create Route
           </button>
         </div>
       ) : (
