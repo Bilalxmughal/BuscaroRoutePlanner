@@ -694,12 +694,22 @@ export default function RouteBuilder() {
         rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]])
       } else { setErrors({ upload:'Only CSV or Excel.' }); return }
 
-      const parsed = rows.map(r => {
-        const n = {}; Object.keys(r).forEach(k => n[k.toLowerCase().trim()] = r[k])
-        const lat = parseFloat(n.lat), lng = parseFloat(n.lng ?? n.long ?? n.longitude)
-        if (isNaN(lat) || isNaN(lng)) return null
-        return { id: uid(), name: String(n.label ?? n.name ?? n.stop ?? '').trim() || 'Stop', lat, lng }
-      }).filter(Boolean)
+      const parsed = rows.map((r, rowIdx) => {
+  const n = {}; Object.keys(r).forEach(k => n[k.toLowerCase().trim()] = r[k])
+  const lat = parseFloat(n.lat), lng = parseFloat(n.lng ?? n.long ?? n.longitude)
+  if (isNaN(lat) || isNaN(lng)) return null
+
+  const nameVal =
+    n.label ?? n.name ?? n.stop ?? n.title ??
+    n['stop name'] ?? n.stopname ?? n.location ?? n.address ??
+    Object.entries(n).find(([k, v]) =>
+      !['lat','lng','long','longitude','latitude'].includes(k) &&
+      String(v).trim() !== '' &&
+      isNaN(Number(v))
+    )?.[1] ?? ''
+
+  return { id: uid(), name: String(nameVal).trim() || `Stop ${rowIdx + 1}`, lat, lng }
+}).filter(Boolean)
 
       if (!parsed.length) { setErrors({ upload:'No valid rows. Need: label, lat, lng' }); return }
       setStops(prev => [...prev, ...parsed]); setErrors({})

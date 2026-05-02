@@ -112,21 +112,30 @@ export default function CreateRoutePanel({ onClose, editData = null }) {
       }
 
       const parsed = rows
-        .map(r => {
-          // normalize keys: lowercase
-          const norm = {}
-          Object.keys(r).forEach(k => { norm[k.toLowerCase().trim()] = r[k] })
-          const lat = parseFloat(norm.lat)
-          const lng = parseFloat(norm.lng ?? norm.long ?? norm.longitude)
-          if (isNaN(lat) || isNaN(lng)) return null
-          return {
-            id: generateId(),
-            name: String(norm.label ?? norm.name ?? norm.stop ?? '').trim() || `Stop ${stops.length + 1}`,
-            lat,
-            lng
-          }
-        })
-        .filter(Boolean)
+  .map((r, rowIdx) => {
+    const norm = {}
+    Object.keys(r).forEach(k => { norm[k.toLowerCase().trim()] = r[k] })
+    const lat = parseFloat(norm.lat)
+    const lng = parseFloat(norm.lng ?? norm.long ?? norm.longitude)
+    if (isNaN(lat) || isNaN(lng)) return null
+
+    const nameVal =
+      norm.label ?? norm.name ?? norm.stop ?? norm.title ??
+      norm['stop name'] ?? norm.stopname ?? norm.location ?? norm.address ??
+      Object.entries(norm).find(([k, v]) =>
+        !['lat','lng','long','longitude','latitude'].includes(k) &&
+        String(v).trim() !== '' &&
+        isNaN(Number(v))
+      )?.[1] ?? ''
+
+    return {
+      id: generateId(),
+      name: String(nameVal).trim() || `Stop ${stops.length + rowIdx + 1}`,
+      lat,
+      lng
+    }
+  })
+  .filter(Boolean)
 
       if (!parsed.length) {
         setErrors({ upload: 'No valid rows found. Columns needed: label (or name), lat, lng' })
