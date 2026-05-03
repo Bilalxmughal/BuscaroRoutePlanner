@@ -119,7 +119,7 @@ function splitGroups(stops, perVehicle) {
   return groups
 }
 
-// Reverse-geocode first stop lat/lng → short area name via Nominatim (free, no key)
+// Reverse-geocode first stop lat/lng - short area name via Nominatim (free, no key)
 // Returns e.g. "Gulberg III", "DHA Phase 5"
 async function geocodeAreaName(lat, lng) {
   try {
@@ -151,6 +151,15 @@ function buildGMapsUrl(stops, destLat, destLng) {
   let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
   if (wps) url += `&waypoints=${encodeURIComponent(wps)}`
   return url
+}
+
+// ── Shorten URL via TinyURL (free, no API key) ──
+async function shortenUrl(url) {
+  try {
+    const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`)
+    if (res.ok) return await res.text()
+  } catch {}
+  return url // fallback: original URL
 }
 
 function pointInPoly(pt, poly) {
@@ -235,31 +244,58 @@ function decodePolyline(encoded) {
   return poly
 }
 
-async function doExportCSV(routeName, dest, groups, vNames) {
-  const rows = [['Vehicle','Stop#','Name','Latitude','Longitude','GoogleMapsLink']]
+// Export Funtion//
+async function doExportCSV(routeName, dest, groups, vNames, routeLabels, routeLines, destLat, destLng) {
+  const rows = [['Vehicle', 'Route Label', 'Stop#', 'Name', 'Latitude', 'Longitude', 'Distance', 'Est. Time', 'Google Maps Link']]
+
+  // Pehle sab vehicle ke links shorten karo
+  const shortLinks = await Promise.all(
+    groups.map(g => {
+      const url = buildGMapsUrl(g, destLat, destLng)
+      return url ? shortenUrl(url) : Promise.resolve('')
+    })
+  )
+
   groups.forEach((g, gi) => {
+    const info = routeLines?.[gi]
+    const km   = info?.distance ? (info.distance / 1000).toFixed(1) + ' km' : '--'
+    const time = info?.duration ? fmtTime(info.duration) : '--'
     g.forEach((s, si) => {
-      rows.push([vNames[gi]||`Vehicle ${gi+1}`, si+1, s.name, s.lat.toFixed(6), s.lng.toFixed(6), ''])
+      rows.push([
+        vNames[gi] || `Vehicle ${gi + 1}`,
+        routeLabels?.[gi] || '',
+        si + 1,
+        s.name,
+        s.lat.toFixed(6),
+        s.lng.toFixed(6),
+        si === 0 ? km : '',
+        si === 0 ? time : '',
+        si === 0 ? shortLinks[gi] : ''
+      ])
     })
   })
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n')
+
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
   const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}))
-  a.download = `${routeName.replace(/\s+/g,'_')}_routes.csv`
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  a.download = `${routeName.replace(/\s+/g, '_')}_routes.csv`
   a.click()
 }
 
-function doExportPDF(routeName, dest, groups, vNames, destLat, destLng, routeInfo) {
+function doExportPDF(routeName, dest, groups, vNames, destLat, destLng, routeInfo, routeLabels) {
   const lines = [
     `ROUTE GROUP: ${routeName}`, `DESTINATION: ${dest}`,
-    `VEHICLES: ${groups.length}`, `TOTAL STOPS: ${groups.reduce((a,g)=>a+g.length,0)}`, ''
+    `VEHICLES: ${groups.length}`, `TOTAL STOPS: ${groups.reduce((a, g) => a + g.length, 0)}`, ''
   ]
   groups.forEach((g, gi) => {
-    const info = routeInfo?.[gi]
-    lines.push(`── ${vNames[gi]||`Vehicle ${gi+1}`} (${g.length} stops${info?.distance?` · ${fmtDist(info.distance)}`:''}${info?.duration?` · ${fmtTime(info.duration)}`:''}) ──`)
-    g.forEach((s,si) => lines.push(`  ${si+1}. ${s.name}  [${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}]`))
+    const info  = routeInfo?.[gi]
+    const label = routeLabels?.[gi] ? ` | ${routeLabels[gi]}` : ''
+    const km    = info?.distance ? ` · ${fmtDist(info.distance)}` : ''
+    const time  = info?.duration ? ` · ${fmtTime(info.duration)}` : ''
+    lines.push(`── ${vNames[gi] || `Vehicle ${gi + 1}`}${label} (${g.length} stops${km}${time}) ──`)
+    g.forEach((s, si) => lines.push(`  ${si + 1}. ${s.name}  [${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}]`))
     const gm = buildGMapsUrl(g, destLat, destLng)
-    if (gm) lines.push(`  Google Maps: ${gm}`)
+    if (gm) lines.push(`  Google Maps: ${gm}`)  // PDF mein short link baad mein load nahi ho sakta, original hi rahega
     lines.push('')
   })
   const w = window.open('', '_blank')
@@ -300,7 +336,7 @@ export default function RouteBuilder() {
   // ── Step 2 ──
   const [groups,        setGroups]        = useState([])
   const [vNames,        setVNames]        = useState([])
-  const [routeLabels,   setRouteLabels]   = useState([])  // geocoded "Area → Dest" labels
+  const [routeLabels,   setRouteLabels]   = useState([])  // geocoded "Area - Dest" labels
   const [geocodingIdx,  setGeocodingIdx]  = useState(new Set()) // which indices are loading
   const [mapMode,       setMapMode]       = useState('pin')
   const [selStops,      setSelStops]      = useState(new Set())
@@ -453,7 +489,7 @@ export default function RouteBuilder() {
         </div>`,
         { direction: 'top', offset: [0, -12], permanent: false }
       )
-      // Click pool pin → assign quick popup
+      // Click pool pin - assign quick popup
       const assignBtns = groups.map((_, ti) =>
         `<button onclick="window.__assignFromPool('${s.id}',${ti})"
           style="padding:4px 12px;font-size:11px;font-weight:600;border-radius:12px;cursor:pointer;
@@ -621,43 +657,55 @@ export default function RouteBuilder() {
     return () => clearTimeout(routeRefreshTimer.current)
   }, [groups, step])
 
-  // ── Step 1 → Step 2 ──
-  const goToStep2 = () => {
-    const err = {}
-    if (!name.trim()) err.name = 'Route name required'
-    if (!dest.trim()) err.dest = 'Destination required'
-    if (!destCoord.trim() || !parseLatLng(destCoord)) err.destCoord = 'Valid coordinates required'
-    if (!stops.length) err.stops = 'Add at least one stop'
-    if (Object.keys(err).length) { setErrors(err); return }
-    setErrors({})
-    const dp = parseLatLng(destCoord)
-    const clustered = smartCluster(stops, Math.ceil(stops.length / actualPer), dp)
-    setGroups(clustered)
-    setStopsPool([])
-    // Vehicle numbers fixed: Vehicle 1, Vehicle 2...
-    setVNames(clustered.map((_, i) => `Vehicle ${i + 1}`))
-    // Route labels: restore from edit OR geocode first stop of each cluster
-    if (isEdit && editData?.routes) {
-      setRouteLabels(clustered.map((_, i) => editData.routes[i]?.routeLabel || ''))
-    } else {
-      setRouteLabels(clustered.map(() => '')) // blank until geocoded
-      // Geocode first stop of each group async
-      clustered.forEach((grp, i) => {
-        if (!grp[0]) return
-        setGeocodingIdx(prev => new Set([...prev, i]))
-        geocodeAreaName(grp[0].lat, grp[0].lng).then(area => {
-          setRouteLabels(prev => {
-            const n = [...prev]
-            n[i] = area ? (area + ' → ' + dest) : ('Vehicle ' + (i + 1) + ' → ' + dest)
-            return n
-          })
-          setGeocodingIdx(prev => { const s = new Set(prev); s.delete(i); return s })
-        })
+  // ── Step 1 - Step 2 ──
+  // ── Step 1 - Step 2 ──
+const goToStep2 = () => {
+  const err = {}
+  if (!name.trim()) err.name = 'Route name required'
+  if (!dest.trim()) err.dest = 'Destination required'
+  if (!destCoord.trim() || !parseLatLng(destCoord)) err.destCoord = 'Valid coordinates required'
+  if (!stops.length) err.stops = 'Add at least one stop'
+  if (Object.keys(err).length) { setErrors(err); return }
+  setErrors({})
+  const dp = parseLatLng(destCoord)
+
+  // ✅ Edit mode mein saved groups wapas lao, re-cluster mat karo
+  let clustered
+  if (isEdit && editData?.routes?.length) {
+    clustered = editData.routes.map(r =>
+      r.stops.map(s => {
+        const found = stops.find(st => st.lat === s.lat && st.lng === s.lng)
+        return found || { id: uid(), ...s }
       })
-    }
-    setStep(2)
-    fetchAllRouteLines(clustered)
+    ).filter(g => g.length > 0)
+  } else {
+    clustered = smartCluster(stops, Math.ceil(stops.length / actualPer), dp)
   }
+
+  setGroups(clustered)
+  setStopsPool([])
+  setVNames(clustered.map((_, i) => `Vehicle ${i + 1}`))
+
+  if (isEdit && editData?.routes) {
+    setRouteLabels(clustered.map((_, i) => editData.routes[i]?.routeLabel || ''))
+  } else {
+    setRouteLabels(clustered.map(() => ''))
+    clustered.forEach((grp, i) => {
+      if (!grp[0]) return
+      setGeocodingIdx(prev => new Set([...prev, i]))
+      geocodeAreaName(grp[0].lat, grp[0].lng).then(area => {
+        setRouteLabels(prev => {
+          const n = [...prev]
+          n[i] = area ? (area + ' - ' + dest) : ('Vehicle ' + (i + 1) + ' - ' + dest)
+          return n
+        })
+        setGeocodingIdx(prev => { const s = new Set(prev); s.delete(i); return s })
+      })
+    })
+  }
+  setStep(2)
+  fetchAllRouteLines(clustered)
+}
 
   // ── Step 1 stop management ──
   const addStopManual = () => {
@@ -754,7 +802,7 @@ export default function RouteBuilder() {
     clearSelection()
   }
 
-  // ── Remove stop from group → Unassigned Pool ──
+  // ── Remove stop from group - Unassigned Pool ──
   const removeFromGroup = (gi, sid) => {
     const stop = groups[gi]?.find(s => s.id === sid)
     if (!stop) return
@@ -899,7 +947,7 @@ export default function RouteBuilder() {
               <div className={styles.divider} />
               <div className={styles.cardTitle}>Stops Per Vehicle</div>
               <p className={styles.hint}>
-                {stops.length} stops → <strong>{stops.length ? Math.ceil(stops.length/actualPer) : 0} vehicles</strong> ({actualPer} stops each)
+                {stops.length} stops - <strong>{stops.length ? Math.ceil(stops.length/actualPer) : 0} vehicles</strong> ({actualPer} stops each)
               </p>
               <div className={styles.chipRow}>
                 {PER_VEHICLE_OPTS.map(n => (
@@ -992,7 +1040,7 @@ export default function RouteBuilder() {
                       </div>
                     ))}
                     {g.length > 4 && <div className={styles.previewMore}>+{g.length-4} more</div>}
-                    <div className={styles.previewDest}>→ 🏁 {dest || 'Destination'}</div>
+                    <div className={styles.previewDest}>- 🏁 {dest || 'Destination'}</div>
                   </div>
                 ))}
               </div>
@@ -1143,7 +1191,7 @@ export default function RouteBuilder() {
                       <input
                         className={styles.routeLabelInp}
                         value={routeLabels[gi] || ''}
-                        placeholder={geocodingIdx.has(gi) ? 'Fetching area name...' : 'Route name (e.g. Gulberg → Office)'}
+                        placeholder={geocodingIdx.has(gi) ? 'Fetching area name...' : 'Route name (e.g. Gulberg - Office)'}
                         onChange={e=>{const u=[...routeLabels];u[gi]=e.target.value;setRouteLabels(u)}}
                       />
                       {geocodingIdx.has(gi) && (
@@ -1161,7 +1209,7 @@ export default function RouteBuilder() {
 
                     {/* Sequence strip */}
                     <div className={styles.destIndicator}>
-                      <span>Stop 1 → … → Stop {grp.length} → 🏁 {dest}</span>
+                      <span>Stop 1 - … - Stop {grp.length} - 🏁 {dest}</span>
                     </div>
 
                     {/* Stop list with ↑↓ reorder buttons (FIX 1) */}
@@ -1187,7 +1235,7 @@ export default function RouteBuilder() {
                           </button>
                           <button className={styles.dragDel}
                             onClick={()=>removeFromGroup(gi,s.id)}
-                            title="Remove → Unassigned Pool">
+                            title="Remove - Unassigned Pool">
                             <X size={10}/>
                           </button>
                         </div>
@@ -1256,10 +1304,10 @@ export default function RouteBuilder() {
               <AlertTriangle size={13}/> {stopsPool.length} stop{stopsPool.length!==1?'s':''} unassigned
             </div>
           )}
-          <button className={styles.exportBtn} onClick={()=>doExportCSV(name,dest,groups,vNames)}>
+          <button className={styles.exportBtn} onClick={()=>doExportCSV(name,dest,groups,vNames,routeLabels,routeLines,destParsed?.lat,destParsed?.lng)}>
             <Download size={13}/> CSV
           </button>
-          <button className={styles.exportBtn} onClick={()=>doExportPDF(name,dest,groups,vNames,destParsed?.lat,destParsed?.lng,routeLines)}>
+          <button className={styles.exportBtn} onClick={()=>doExportPDF(name,dest,groups,vNames,destParsed?.lat,destParsed?.lng,routeLines,routeLabels)}>
             <Download size={13}/> PDF
           </button>
           {errors.save && <div className={styles.saveErr}><AlertTriangle size={13}/> {errors.save}</div>}

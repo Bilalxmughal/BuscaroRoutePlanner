@@ -1,47 +1,311 @@
 /* src/pages/MapView.module.css */
-.wrap { display: flex; flex-direction: column; height: calc(100vh - 56px); }
 
-.mapLayout {
-  flex: 1; display: flex; gap: 16px; min-height: 0;
+.wrap {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  background: #f8fafc;
 }
 
-.legend {
-  width: 220px; min-width: 220px;
-  background: #fff; border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 14px;
-  overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+/* ── Top Bar ── */
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
-.legendTitle {
-  font-size: 11px; font-weight: 700; color: var(--orange);
-  text-transform: uppercase; letter-spacing: 1px;
-  border-bottom: 1px solid var(--orange-border);
-  padding-bottom: 7px; margin-bottom: 4px;
-  display: flex; align-items: center; gap: 5px;
+.topMeta { flex: 1; min-width: 0; }
+.topTitle {
+  font-size: 15px; font-weight: 800; color: #0f172a;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topSub {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #64748b; margin-top: 1px;
 }
 
-.legendGroup {
-  font-size: 11px; font-weight: 700; color: #0f172a;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  margin-top: 8px; padding-top: 8px;
-  border-top: 1px solid #f1f5f9;
+.topActions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* ── Layout ── */
+.layout {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.legendItem {
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 5px 0;
+/* ── Sidebar ── */
+.sidebar {
+  width: 270px;
+  min-width: 270px;
+  background: #fff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  flex-shrink: 0;
 }
-.legendDot {
-  width: 10px; height: 10px; border-radius: 50%;
-  flex-shrink: 0; margin-top: 3px;
-}
-.legendName { font-size: 12px; font-weight: 600; color: #334155; }
-.legendMeta { font-size: 11px; color: #94a3b8; }
 
-.mapContainer {
-  flex: 1; border-radius: var(--radius-lg);
-  overflow: hidden; border: 1px solid var(--border);
-  position: relative; min-height: 400px;
+.sidebarLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 10px 14px 6px;
+}
+
+/* ── Group Switcher ── */
+.groupSwitcher {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+.groupBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.groupBtn:hover { background: #f8fafc; }
+.groupBtnActive { background: #fff4ed !important; }
+
+.groupDot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.groupName { flex: 1; font-size: 12px; font-weight: 600; color: #0f172a; }
+.groupArrow { color: #cbd5e1; }
+.groupBtnActive .groupArrow { color: #f97316; }
+
+/* ── Stats Band ── */
+.statsBand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.statItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 3px 9px;
+}
+
+/* ── Vehicle List ── */
+.vehicleList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+}
+
+.vCard {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.vCard::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--vcol, #f97316);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.vCard:hover::before { opacity: 0.5; }
+.vCardHidden { opacity: 0.45; }
+
+/* Vehicle header */
+.vHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s;
+}
+.vHead:hover { background: #f8fafc; }
+
+.vDot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.vInfo { flex: 1; min-width: 0; }
+.vName {
+  font-size: 12px; font-weight: 700; color: #0f172a;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vLabel {
+  font-size: 10px; color: #f97316; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.vRight {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.vCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 5px;
+  background: #f1f5f9;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+}
+
+/* Hide/Show button */
+.hideBtn {
+  width: 26px; height: 26px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.hideBtn:hover { border-color: #f97316; color: #f97316; background: #fff4ed; }
+.hideBtnOn {
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #dc2626 !important;
+}
+
+.vChevron { color: #cbd5e1; transition: transform 0.2s; flex-shrink: 0; }
+.vChevronOpen { transform: rotate(180deg); color: #f97316; }
+
+/* Vehicle stats */
+.vStats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 8px 30px;
+  flex-wrap: wrap;
+}
+
+.vStat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.vStatEmpty {
+  font-size: 10px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.vMapsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 5px;
+  padding: 2px 7px;
+  text-decoration: none;
+  margin-left: auto;
+  transition: all 0.15s;
+}
+.vMapsBtn:hover { background: #dcfce7; }
+
+/* Stops list */
+.stopsList {
+  padding: 4px 8px 8px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: expandDown 0.15s ease;
+}
+
+@keyframes expandDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.stopRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.stopRow:hover { background: #f1f5f9; }
+
+.stopNum {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.stopInfo { flex: 1; min-width: 0; }
+.stopName {
+  display: block; font-size: 11px; font-weight: 600; color: #334155;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stopCoord {
+  display: block; font-size: 9px; color: #94a3b8; font-family: monospace;
+}
+
+/* ── Map ── */
+.mapWrap {
+  flex: 1;
+  position: relative;
+  min-width: 0;
 }
 
 .map { height: 100%; width: 100%; }
@@ -51,9 +315,50 @@
   background: #f8fafc;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 12px;
+  font-size: 13px; color: #94a3b8;
 }
 
+/* Floating map controls */
+.mapControls {
+  position: absolute;
+  bottom: 20px;
+  right: 16px;
+  z-index: 500;
+  display: flex;
+  gap: 8px;
+}
+
+.mapCtrlBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  color: #475569;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  transition: all 0.15s;
+}
+.mapCtrlBtn:hover {
+  border-color: #f97316;
+  color: #f97316;
+  background: #fff4ed;
+}
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
-  .mapLayout { flex-direction: column; }
-  .legend { width: 100%; min-width: unset; max-height: 180px; }
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: 220px;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .vehicleList { flex-direction: row; overflow-x: auto; }
+  .vCard { min-width: 200px; border-bottom: none; border-right: 1px solid #f1f5f9; }
 }
