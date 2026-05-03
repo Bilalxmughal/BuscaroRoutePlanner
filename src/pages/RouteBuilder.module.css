@@ -714,7 +714,7 @@
   align-items: center;
   gap: 7px;
   padding: 9px 11px;
-  background: #f8fafc;
+  background: #707070;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -789,8 +789,6 @@
   padding: 5px 11px;
   font-size: 10px;
   font-weight: 600;
-  color: #f97316;
-  background: #fff4ed;
   border-bottom: 1px solid #fed7aa;
   text-align: center;
   white-space: nowrap;
@@ -1095,6 +1093,7 @@
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+  color: #ffffff;
 }
 
 /* ── Route label row (geocoded area name — editable) ── */
@@ -1111,7 +1110,6 @@
   flex: 1;
   font-size: 11px;
   font-weight: 500;
-  color: #c2410c;
   border: none;
   background: transparent;
   outline: none;

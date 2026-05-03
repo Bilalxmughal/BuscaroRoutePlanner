@@ -567,9 +567,9 @@ export default function RouteBuilder() {
             <b style="font-size:13px">${s.name}</b><br>
             <span style="color:${col};font-size:11px;font-weight:600">● ${vName} — Stop ${si+1}/${grp.length}</span><br>
             <code style="font-size:10px;color:#94a3b8">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</code>
-            <div style="margin-top:8px;font-size:11px;color:#64748b;font-weight:600">Isi route mein move karo:</div>
+            <div style="margin-top:8px;font-size:11px;color:#64748b;font-weight:600">Move along this route:</div>
             <div style="margin-top:3px;display:flex;gap:4px">${upBtn}${dnBtn}</div>
-            <div style="margin-top:8px;font-size:11px;color:#64748b;font-weight:600">Doosre vehicle mein transfer:</div>
+            <div style="margin-top:8px;font-size:11px;color:#64748b;font-weight:600">Transfer to another vehicle or route.:</div>
             <div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">${assignBtns}</div>
           </div>
         `, { maxWidth: 290 })
@@ -1141,7 +1141,7 @@ const goToStep2 = () => {
                   <span className={styles.poolCount}>{stopsPool.length}</span>
                 </div>
                 <p className={styles.poolSubtitle}>
-                  Map par grey (?) pins ke tor par dikh rahe hain — drag karke assign karo
+                  They are showing up as grey pins on the map — drag them to assign.
                 </p>
                 {stopsPool.map(s => (
                   <div key={s.id} className={styles.poolStop}
